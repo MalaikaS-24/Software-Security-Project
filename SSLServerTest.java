@@ -4,14 +4,14 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.security.KeyStore;
 
-public class SSLServer {
+public class SSLServerTest {
 
     public static void main(String[] args) {
         int port = 12345;
-        String keyStorePath = "/serverkeystore.jks";
-        String keyStorePassword = "password";
-        String trustStorePath = "/servertruststore.jks";
-        String trustStorePassword = "password";
+        String keyStorePath = "/serverkeystore.jks"; // Path to server keystore
+        String keyStorePassword = "password"; // Password for server keystore
+        String trustStorePath = "/servertruststore.jks"; // Path to server truststore
+        String trustStorePassword = "password"; // Password for server truststore
         String[] supportedProtocols = {"TLSv1.2"};
         String[] supportedCipherSuites = {"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"};
 
@@ -19,7 +19,7 @@ public class SSLServer {
             // Create SSL context
             SSLContext sslContext = SSLContext.getInstance("TLS");
 
-            // Load keystore
+            // Load keystore (containing server's private key and certificate)
             KeyStore keyStore = KeyStore.getInstance("JKS");
             keyStore.load(SSLServer.class.getResourceAsStream(keyStorePath), keyStorePassword.toCharArray());
 
@@ -27,7 +27,7 @@ public class SSLServer {
             KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             keyManagerFactory.init(keyStore, keyStorePassword.toCharArray());
 
-            // Load truststore
+            // Load truststore (containing client's trusted certificates)
             KeyStore trustStore = KeyStore.getInstance("JKS");
             trustStore.load(SSLServer.class.getResourceAsStream(trustStorePath), trustStorePassword.toCharArray());
 
@@ -55,31 +55,24 @@ public class SSLServer {
                 SSLSocket sslSocket = (SSLSocket) sslServerSocket.accept();
 
                 // Perform SSL handshake
-                sslSocket.startHandshake();
-                System.out.println("SSL handshake completed successfully.");
-
-                // Handle client communication
-                handleClient(sslSocket);
-
-                // Close the SSL socket (not necessary if keeping the server running)
-                sslSocket.close();
+                try {
+                    sslSocket.startHandshake();
+                    System.out.println("SSL handshake completed successfully.");
+                    
+                    // Simulate certificate validation failure
+                    throw new Exception("Certificate validation failed: Invalid certificate provided by the server.");
+                } catch (Exception e) {
+                    // Handle SSL handshake failure
+                    System.err.println("SSL handshake failed: " + e.getMessage());
+                    e.printStackTrace();
+                } finally {
+                    // Close the SSL socket
+                    sslSocket.close();
+                }
             }
         } catch (Exception e) {
             // Print stack trace in case of error
             e.printStackTrace();
         }
-    }
-
-    private static void handleClient(SSLSocket sslSocket) throws Exception {
-        // Send data to client
-        OutputStream outputStream = sslSocket.getOutputStream();
-        outputStream.write("Hello from server!".getBytes());
-        System.out.println("Data transmission completed successfully.");
-
-        // Receive data from client
-        InputStream inputStream = sslSocket.getInputStream();
-        byte[] buffer = new byte[1024];
-        int bytesRead = inputStream.read(buffer);
-        System.out.println("Received from client: " + new String(buffer, 0, bytesRead));
     }
 }
